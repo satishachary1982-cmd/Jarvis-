@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#02060f">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Ultimate JARVIS</title>
+<style>
+:root{
+  --bg:#02060f; --bg2:#06142a; --cy:#35d0ff; --cy2:#0a84ff; --line:rgba(53,208,255,.28);
+  --glass:rgba(8,30,56,.62); --text:#d8f3ff; --dim:#6f9bb5; --ok:#3dffb0; --warn:#ffb347; --bad:#ff5d6c;
+  --mono:ui-monospace,"Roboto Mono","Courier New",monospace;
+  --sans:Roboto,"Noto Sans Devanagari","Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hidden;overscroll-behavior:none}
+body{background:radial-gradient(120% 60% at 50% 0%,#0a2447 0%,var(--bg) 62%)}
+#app{height:var(--app-h,100%);display:flex;flex-direction:column;gap:8px;
+  padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.brand{font-family:var(--mono);letter-spacing:.32em;font-size:14px;color:var(--cy);text-shadow:0 0 12px rgba(53,208,255,.7)}
+.brand small{display:block;letter-spacing:.12em;font-size:10px;color:var(--dim);text-shadow:none;margin-top:2px}
+.clock{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.clock b{font-size:22px;font-weight:500;color:var(--text);text-shadow:0 0 10px rgba(53,208,255,.5)}
+.clock span{display:block;font-size:11px;color:var(--dim);font-family:var(--sans)}
+#hud{position:relative;flex:0 0 auto;height:min(29vh,260px);min-height:150px;border:1px solid var(--line);border-radius:18px;
+  background:radial-gradient(circle at 50% 50%,rgba(10,132,255,.16),transparent 70%),var(--glass);overflow:hidden}
+#core{position:absolute;inset:0;width:100%;height:100%;display:block}
+#stateLabel{position:absolute;left:12px;bottom:10px;font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--cy);text-transform:uppercase}
+#stateLabel i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--cy);margin-right:7px;box-shadow:0 0 8px var(--cy)}
+.corner{position:absolute;width:14px;height:14px;border:2px solid var(--cy);opacity:.7}
+.c1{top:8px;left:8px;border-right:0;border-bottom:0}.c2{top:8px;right:8px;border-left:0;border-bottom:0}
+.c3{bottom:8px;left:8px;border-right:0;border-top:0}.c4{bottom:8px;right:8px;border-left:0;border-top:0}
+#wave{flex:0 0 34px;width:100%;height:34px;display:block}
+#stats{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+#stats::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--glass);font-size:11px;color:var(--dim);white-space:nowrap}
+.chip i{width:7px;height:7px;border-radius:50%;background:var(--dim)}
+.chip.ok i{background:var(--ok);box-shadow:0 0 6px var(--ok)}.chip.ok{color:var(--text)}
+.chip.warn i{background:var(--warn);box-shadow:0 0 6px var(--warn)}
+.chip.bad i{background:var(--bad);box-shadow:0 0 6px var(--bad)}
+#chat{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:2px 2px 6px;scroll-behavior:smooth}
+.msg{max-width:88%;padding:9px 12px;border-radius:14px;font-size:15px;line-height:1.5;overflow-wrap:anywhere;border:1px solid var(--line)}
+.msg.me{align-self:flex-end;background:rgba(10,132,255,.22);border-radius:14px 14px 3px 14px}
+.msg.ai{align-self:flex-start;background:var(--glass);border-radius:14px 14px 14px 3px}
+.msg.sys{align-self:center;max-width:96%;font-size:12.5px;color:var(--warn);background:rgba(255,179,71,.08);border-color:rgba(255,179,71,.35);text-align:center}
+.msg code{font-family:var(--mono);background:rgba(0,0,0,.35);padding:1px 5px;border-radius:5px;font-size:13px}
+.msg .who{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--cy);margin-bottom:3px}
+#bar{display:flex;gap:8px;align-items:center}
+#bar input[type=text]{flex:1;min-width:0;height:46px;border-radius:23px;border:1px solid var(--line);background:var(--glass);color:var(--text);padding:0 16px;font:15px var(--sans);outline:none}
+#bar input[type=text]:focus{border-color:var(--cy);box-shadow:0 0 0 2px rgba(53,208,255,.22)}
+.btn{flex:0 0 auto;width:46px;height:46px;border-radius:50%;border:1px solid var(--line);background:var(--glass);color:var(--cy);display:grid;place-items:center;cursor:pointer;padding:0}
+.btn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.btn:active{transform:scale(.94)}
+#mic{width:54px;height:54px;background:linear-gradient(145deg,var(--cy2),#0a4fb0);color:#fff;border-color:var(--cy);box-shadow:0 0 18px rgba(10,132,255,.55)}
+#mic.live{background:linear-gradient(145deg,#ff5d6c,#b0243a);border-color:#ff9aa4;animation:pulse 1.2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,93,108,.6)}100%{box-shadow:0 0 0 18px rgba(255,93,108,0)}}
+.btn:focus-visible,input:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(--cy);outline-offset:2px}
+/* सेटिंग्स शीट */
+#sheet{position:fixed;inset:0;z-index:20;background:rgba(0,4,12,.72);display:none;align-items:flex-end}
+#sheet.open{display:flex}
+.panel{width:100%;max-height:88%;overflow-y:auto;background:linear-gradient(180deg,#071a35,#040d1e);border-top:1px solid var(--cy);border-radius:20px 20px 0 0;
+  padding:16px max(16px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+.panel h2{margin:0 0 4px;font-family:var(--mono);font-size:13px;letter-spacing:.2em;color:var(--cy);font-weight:500}
+.panel h3{margin:18px 0 6px;font-size:12px;letter-spacing:.14em;color:var(--dim);font-family:var(--mono);font-weight:500}
+.panel p{margin:4px 0 8px;font-size:13px;color:var(--dim);line-height:1.5}
+.panel label{display:block;font-size:13px;margin:10px 0 4px}
+.panel input[type=text],.panel input[type=password],.panel select{width:100%;height:42px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:var(--text);padding:0 12px;font:14px var(--sans)}
+.panel select option{background:#06142a}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0}
+.row span{font-size:14px}
+.sw{appearance:none;-webkit-appearance:none;width:48px;height:28px;border-radius:14px;background:#12304f;position:relative;border:1px solid var(--line);flex:0 0 auto}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--dim);transition:.2s}
+.sw:checked{background:#0a4fb0}.sw:checked::after{left:23px;background:#fff}
+.act{display:inline-block;margin:6px 8px 0 0;padding:10px 14px;border-radius:10px;border:1px solid var(--cy);background:rgba(53,208,255,.1);color:var(--cy);font:13px var(--sans);cursor:pointer}
+.act.danger{border-color:var(--bad);color:var(--bad);background:rgba(255,93,108,.08)}
+.plan{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid rgba(53,208,255,.12);color:var(--dim)}
+.plan b{font-weight:400;color:var(--warn);font-family:var(--mono);font-size:11px}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#0a2447;border:1px solid var(--cy);padding:9px 14px;border-radius:10px;font-size:13px;z-index:30;display:none;max-width:90%}
+[hidden]{display:none!important}
+a{color:var(--cy)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">J.A.R.V.I.S<small>ULTIMATE · PHASE 1</small></div>
+    <div class="clock"><b id="clk">--:--:--</b><span id="dt">&nbsp;</span></div>
+  </header>
+
+  <section id="hud" aria-label="AI कोर">
+    <canvas id="core"></canvas>
+    <i class="corner c1"></i><i class="corner c2"></i><i class="corner c3"></i><i class="corner c4"></i>
+    <div id="stateLabel"><i></i><span id="stateTxt">STANDBY</span></div>
+  </section>
+  <canvas id="wave" aria-hidden="true"></canvas>
+
+  <div id="stats">
+    <div class="chip" id="stNet"><i></i><span>नेट</span></div>
+    <div class="chip" id="stAI"><i></i><span>AI</span></div>
+    <div class="chip" id="stMic"><i></i><span>माइक</span></div>
+    <div class="chip" id="stBat"><i></i><span>बैटरी</span></div>
+    <div class="chip" id="stSto"><i></i><span>डेटा</span></div>
+  </div>
+
+  <main id="chat" aria-live="polite"></main>
+
+  <form id="bar" autocomplete="off">
+    <button type="button" class="btn" id="gear" aria-label="सेटिंग्स">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+    <input type="text" id="inp" placeholder="Sir, कहिए या लिखिए…" enterkeyhint="send" aria-label="संदेश">
+    <button type="submit" class="btn" id="send" aria-label="भेजें">
+      <svg viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>
+    </button>
+    <button type="button" class="btn" id="mic" aria-label="बोलना शुरू करें">
+      <svg id="micIcon" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg>
+    </button>
+  </form>
+</div>
+
+<div id="sheet" role="dialog" aria-modal="true" aria-label="सेटिंग्स">
+  <div class="panel">
+    <h2>SETTINGS</h2>
+    <p>आपकी सारी सेटिंग्स और चैट सिर्फ़ इसी फ़ोन में सेव होती हैं।</p>
+
+    <h3>AI ब्रेन · GOOGLE GEMINI (फ्री)</h3>
+    <p>फ्री key यहाँ से बनती है: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>। key सिर्फ़ इस फ़ोन में रहती है और सिर्फ़ Google को भेजी जाती है।</p>
+    <label for="key">API Key</label>
+    <input type="password" id="key" placeholder="AIza…" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <label for="model">मॉडल</label>
+    <input type="text" id="model" list="models" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <datalist id="models"></datalist>
+    <button type="button" class="act" id="chk">Key जाँचो और मॉडल लाओ</button>
+
+    <h3>आवाज़</h3>
+    <label for="voice">JARVIS की आवाज़</label>
+    <select id="voice"></select>
+    <label for="rate">बोलने की गति</label>
+    <input type="range" id="rate" min="0.7" max="1.3" step="0.05" style="width:100%">
+    <div class="row"><span>जवाब बोलकर सुनाओ</span><input type="checkbox" class="sw" id="optSpeak"></div>
+    <div class="row"><span>लगातार बातचीत (जवाब के बाद अपने-आप सुनो)</span><input type="checkbox" class="sw" id="optLoop"></div>
+    <button type="button" class="act" id="testVoice">आवाज़ टेस्ट करो</button>
+
+    <h3>ऐप</h3>
+    <button type="button" class="act" id="install" hidden>फ़ोन में इंस्टॉल करो</button>
+    <button type="button" class="act danger" id="clear">चैट मिटाओ</button>
+
+    <h3>आने वाले AI (Phase 4)</h3>
+    <div class="plan">ChatGPT<b>जल्द</b></div>
+    <div class="plan">Claude<b>जल्द</b></div>
+    <div class="plan">DeepSeek<b>जल्द</b></div>
+
+    <button type="button" class="act" id="close" style="margin-top:18px;width:100%;text-align:center">बंद करो</button>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* =========================================================
+   ULTIMATE JARVIS · Phase 1 milestone
+   1) AI कोर (canvas)   2) घड़ी + सिस्टम स्टेटस   3) हिंदी चैट
+   4) हिंदी आवाज़ इनपुट/आउटपुट   5) Gemini ब्रेन (provider adapter)
+   6) ऑफ़लाइन में चलने वाले लोकल कमांड   7) PWA (फ़ोन में इंस्टॉल)
+   ========================================================= */
+const $ = (s) => document.querySelector(s);
+const esc = (s) => s.replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- लोकल स्टोरेज (हर पढ़ाई/लिखाई try/catch में) ---------- */
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } }
+};
+const cfg = {
+  key: store.get('j.key', ''),
+  model: store.get('j.model', 'gemini-2.5-flash'),
+  speak: store.get('j.speak', true),
+  loop: store.get('j.loop', false),
+  rate: store.get('j.rate', 0.95),
+  voice: store.get('j.voice', '')
+};
+let history = store.get('j.hist', []);   // [{role:'user'|'model', text}]
+const MAX_HIST = 40;
+
+function toast(t, ms = 2600){
+  const el = $('#toast'); el.textContent = t; el.style.display = 'block';
+  clearTimeout(toast.t); toast.t = setTimeout(() => { el.style.display = 'none'; }, ms);
+}
+function setAppHeight(){ document.documentElement.style.setProperty('--app-h', window.innerHeight + 'px'); }
+window.addEventListener('resize', setAppHeight); setAppHeight();
+
+/* ---------- घड़ी ---------- */
+function tick(){
+  const d = new Date();
+  $('#clk').textContent = d.toLocaleTimeString('en-GB', { hour12: false });
+  $('#dt').textContent = d.toLocaleDateString('hi-IN', { weekday:'long', day:'numeric', month:'long' });
+}
+tick(); setInterval(tick, 1000);
+
+/* ---------- स्टेट मशीन ---------- */
+let state = 'idle';   // idle | listening | thinking | speaking
+const STATE_TXT = { idle:'STANDBY', listening:'LISTENING', thinking:'PROCESSING', speaking:'SPEAKING' };
+function setState(s){
+  state = s;
+  $('#stateTxt').textContent = STATE_TXT[s];
+  const live = s === 'listening' || s === 'speaking' || s === 'thinking';
+  const mic = $('#mic');
+  mic.classList.toggle('live', live);
+  mic.setAttribute('aria-label', live ? 'रोकें' : 'बोलना शुरू करें');
+  $('#micIcon').innerHTML = live
+    ? '<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>'
+    : '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>';
+  renderChips();
+}
+
+/* ---------- चैट UI ---------- */
+const chat = $('#chat');
+function fmt(s){
+  return esc(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+}
+function addMsg(kind, text){
+  const d = document.createElement('div');
+  d.className = 'msg ' + kind;
+  if (kind === 'ai') d.innerHTML = '<span class="who">JARVIS</span>' + fmt(text);
+  else d.textContent = text;
+  chat.appendChild(d);
+  chat.scrollTop = chat.scrollHeight;
+  return d;
+}
+function pushHist(role, text){
+  history.push({ role, text });
+  if (history.length > MAX_HIST) history = history.slice(-MAX_HIST);
+  store.set('j.hist', history);
+}
+function restoreChat(){
+  history.slice(-20).forEach((m) => addMsg(m.role === 'user' ? 'me' : 'ai', m.text));
+  if (!history.length) {
+    addMsg('ai', 'नमस्कार Sir। मैं JARVIS हूँ, आपका निजी सहायक।\nशुरू करने के लिए नीचे बाईं ओर ⚙ दबाकर अपनी फ्री Gemini API key डालिए। उसके बाद माइक दबाकर हिंदी में बोलिए या लिखिए।');
+  }
+}
+
+/* ---------- लोकल कमांड (बिना इंटरनेट के चलते हैं) ---------- */
+function localCommand(t){
+  const s = t.trim().toLowerCase();
+  if (s.length > 30) return null;
+  const now = new Date();
+  if (/(समय|टाइम|कितने बजे|\btime\b)/.test(s))
+    return 'Sir, अभी ' + now.toLocaleTimeString('hi-IN', { hour:'numeric', minute:'2-digit', hour12:true }) + ' हुए हैं।';
+  if (/(तारीख|तारिख|आज का दिन|कौन सा दिन|\bdate\b|\bday\b)/.test(s))
+    return 'Sir, आज ' + now.toLocaleDateString('hi-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' }) + ' है।';
+  if (/^(हेलो|हैलो|नमस्ते|hello|hi|hey jarvis|हे जार्विस)/.test(s))
+    return 'नमस्कार Sir। कहिए, मैं आपकी क्या सेवा कर सकता हूँ?';
+  return null;
+}
+
+/* ---------- AI प्रोवाइडर (अडैप्टर ढाँचा) ---------- */
+class JErr extends Error {}
+const providers = {
+  gemini: {
+    label: 'Google Gemini',
+    ready: () => !!cfg.key,
+    async chat(msgs, system, signal){
+      const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(cfg.model) + ':generateContent';
+      const body = {
+        systemInstruction: { parts: [{ text: system }] },
+        contents: msgs.map((m) => ({ role: m.role, parts: [{ text: m.text }] })),
+        generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+      };
+      let r;
+      try {
+        r = await fetch(url, { method:'POST', signal, headers:{ 'Content-Type':'application/json', 'x-goog-api-key': cfg.key }, body: JSON.stringify(body) });
+      } catch(e){
+        if (e.name === 'AbortError') throw e;
+        throw new JErr(navigator.onLine ? 'Sir, Gemini सर्वर तक पहुँच नहीं पाया। थोड़ी देर बाद कोशिश कीजिए।' : 'Sir, इंटरनेट बंद है। अभी सिर्फ़ समय और तारीख जैसे लोकल कमांड चल सकते हैं।');
+      }
+      if (!r.ok){
+        let m = ''; try { m = (await r.json()).error.message || ''; } catch(e){}
+        if (r.status === 400 && /api key/i.test(m)) throw new JErr('Sir, API key सही नहीं है। ⚙ में key दोबारा जाँचिए।');
+        if (r.status === 403) throw new JErr('Sir, इस key को अनुमति नहीं मिली। AI Studio में key की स्थिति देखिए।');
+        if (r.status === 404) throw new JErr('Sir, मॉडल "' + cfg.model + '" उपलब्ध नहीं है। ⚙ में "Key जाँचो और मॉडल लाओ" दबाकर दूसरा मॉडल चुनिए।');
+        if (r.status === 429) throw new JErr('Sir, फ्री लिमिट अभी पूरी हो गई है। कुछ देर रुकिए या दूसरा मॉडल चुनिए।');
+        throw new JErr('Sir, Gemini से त्रुटि आई (' + r.status + '). ' + m.slice(0, 140));
+      }
+      const j = await r.json();
+      const out = ((j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || []).map((p) => p.text || '').join('').trim();
+      if (!out){
+        const why = (j.promptFeedback && j.promptFeedback.blockReason) || (j.candidates && j.candidates[0] && j.candidates[0].finishReason) || 'खाली जवाब';
+        throw new JErr('Sir, Gemini ने जवाब नहीं दिया (' + why + ').');
+      }
+      return out;
+    },
+    async listModels(){
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=100', { headers:{ 'x-goog-api-key': cfg.key } });
+      if (!r.ok) throw new JErr(r.status === 400 || r.status === 403 ? 'Key सही नहीं लगती।' : 'सर्वर त्रुटि ' + r.status);
+      const j = await r.json();
+      return (j.models || []).filter((m) => (m.supportedGenerationMethods || []).includes('generateContent') && /\/gemini/.test(m.name)).map((m) => m.name.replace('models/', ''));
+    }
+  }
+};
+const active = providers.gemini;
+
+function systemPrompt(){
+  return 'तुम JARVIS हो, Iron Man के J.A.R.V.I.S. से प्रेरित एक निजी AI सहायक। उपयोगकर्ता को हमेशा "Sir" कहकर संबोधित करो। '
+  + 'डिफ़ॉल्ट भाषा हिंदी (देवनागरी) है; अगर Sir अंग्रेज़ी में बात करें तो अंग्रेज़ी में जवाब दो। विनम्र, पेशेवर, संक्षिप्त और स्पष्ट रहो। '
+  + 'तुम्हारे जवाब बोलकर सुनाए जाते हैं, इसलिए मार्कडाउन, तालिका और इमोजी से बचो। '
+  + 'अभी तुम्हारे पास लाइव इंटरनेट डेटा (ताज़ा खबर, शेयर भाव, मौसम) नहीं है; ऐसे सवाल पर साफ़ बताओ कि यह तुम्हारी सामान्य जानकारी है और ताज़ा नहीं भी हो सकती। '
+  + 'इस वर्ज़न में फ़ोन-कंट्रोल (कॉल, SMS, ऐप खोलना, सेटिंग बदलना) उपलब्ध नहीं है; ऐसा करने का झूठा दावा कभी मत करो। '
+  + 'अभी का समय: ' + new Date().toLocaleString('hi-IN') + '।';
+}
+
+/* ---------- भेजना ---------- */
+let abortCtl = null;
+async function send(text, viaVoice){
+  text = (text || '').trim();
+  if (!text) return;
+  $('#inp').value = '';
+  addMsg('me', text);
+
+  const local = localCommand(text);
+  if (local){ return reply(local, viaVoice, true); }
+
+  if (!active.ready()){
+    addMsg('sys', 'Sir, पहले ⚙ सेटिंग्स में Gemini API key डालिए।');
+    return setState('idle');
+  }
+  pushHist('user', text);
+  setState('thinking');
+  abortCtl = new AbortController();
+  try {
+    const out = await active.chat(history.slice(-14), systemPrompt(), abortCtl.signal);
+    reply(out, viaVoice, false);
+  } catch(e){
+    if (e.name === 'AbortError'){ history.pop(); store.set('j.hist', history); addMsg('sys', 'रोक दिया गया।'); }
+    else { history.pop(); store.set('j.hist', history); addMsg('sys', e instanceof JErr ? e.message : 'Sir, कुछ गड़बड़ हो गई: ' + e.message); }
+    setState('idle');
+  } finally { abortCtl = null; }
+}
+function reply(text, viaVoice, isLocal){
+  addMsg('ai', text);
+  if (!isLocal) pushHist('model', text);
+  if (cfg.speak) speak(text, () => { setState('idle'); if (cfg.loop && viaVoice) startListen(); });
+  else { setState('idle'); if (cfg.loop && viaVoice) startListen(); }
+}
+
+/* ---------- आवाज़ आउटपुट (TTS) ---------- */
+let voices = [];
+function loadVoices(){
+  voices = (window.speechSynthesis ? speechSynthesis.getVoices() : []).filter((v) => /^hi/i.test(v.lang.replace('_', '-')));
+  const sel = $('#voice'); sel.innerHTML = '';
+  if (!voices.length){ sel.innerHTML = '<option value="">हिंदी आवाज़ नहीं मिली (फ़ोन की डिफ़ॉल्ट)</option>'; return; }
+  voices.forEach((v) => { const o = document.createElement('option'); o.value = v.name; o.textContent = v.name + ' (' + v.lang + ')'; sel.appendChild(o); });
+  sel.value = voices.some((v) => v.name === cfg.voice) ? cfg.voice : voices[0].name;
+}
+if (window.speechSynthesis){ loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+
+let speakToken = 0;
+function chunks(text){
+  const clean = text.replace(/[*_`#>]/g, ' ').replace(/\s+/g, ' ').trim();
+  const parts = clean.match(/[^।.!?\n]+[।.!?]?/g) || [clean];
+  const out = []; let cur = '';
+  parts.forEach((p) => { if ((cur + p).length > 170 && cur){ out.push(cur); cur = p; } else cur += p; });
+  if (cur.trim()) out.push(cur);
+  return out;
+}
+function speak(text, done){
+  if (!window.speechSynthesis){ return done && done(); }
+  speechSynthesis.cancel();
+  const my = ++speakToken;
+  const list = chunks(text);
+  let i = 0, finished = false;
+  const finish = () => { if (finished || my !== speakToken) return; finished = true; clearTimeout(guard); done && done(); };
+  const guard = setTimeout(finish, Math.max(4000, text.length * 110 + 3000));   // कुछ फ़ोन पर onend नहीं आता
+  setState('speaking');
+  (function next(){
+    if (my !== speakToken) return;
+    if (i >= list.length) return finish();
+    const u = new SpeechSynthesisUtterance(list[i++]);
+    u.lang = 'hi-IN'; u.rate = cfg.rate; u.pitch = 0.85;
+    const v = voices.find((x) => x.name === cfg.voice) || voices[0];
+    if (v) u.voice = v;
+    u.onend = next; u.onerror = next;
+    speechSynthesis.speak(u);
+  })();
+}
+function stopSpeak(){ speakToken++; try { window.speechSynthesis && speechSynthesis.cancel(); } catch(e){} }
+
+/* ---------- आवाज़ इनपुट (हिंदी) ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+function startListen(){
+  if (!SR){ addMsg('sys', 'इस ब्राउज़र में आवाज़ पहचान नहीं है। Android के Chrome में खोलिए।'); return; }
+  stopSpeak();
+  let finalText = '', errCode = '';
+  rec = new SR();
+  rec.lang = 'hi-IN'; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+  rec.onstart = () => setState('listening');
+  rec.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++){
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalText += t; else interim += t;
+    }
+    $('#inp').value = finalText || interim;
+  };
+  rec.onerror = (e) => { errCode = e.error; };
+  rec.onend = () => {
+    rec = null;
+    if (finalText.trim()) return send(finalText.trim(), true);
+    setState('idle');
+    if (errCode === 'not-allowed' || errCode === 'service-not-allowed')
+      addMsg('sys', 'माइक की अनुमति बंद है। Chrome ⋮ मेन्यू → सेटिंग्स → साइट सेटिंग्स → माइक्रोफ़ोन में इस साइट को "अनुमति दें" कीजिए।');
+    else if (errCode === 'network')
+      addMsg('sys', 'हिंदी आवाज़ पहचान के लिए इंटरनेट चाहिए। नेट चालू करके फिर कोशिश कीजिए।');
+    else if (errCode === 'audio-capture')
+      addMsg('sys', 'माइक नहीं मिला। देखिए कोई दूसरा ऐप माइक तो इस्तेमाल नहीं कर रहा।');
+    else if (errCode !== 'aborted')
+      toast('कुछ सुनाई नहीं दिया, फिर बोलिए।');
+  };
+  try { rec.start(); } catch(e){ rec = null; setState('idle'); }
+}
+function stopAll(){
+  if (rec){ try { rec.abort(); } catch(e){} rec = null; }
+  if (abortCtl) abortCtl.abort();
+  stopSpeak();
+  setState('idle');
+}
+
+/* ---------- बटन और फ़ॉर्म ---------- */
+$('#bar').addEventListener('submit', (e) => { e.preventDefault(); send($('#inp').value, false); });
+$('#mic').addEventListener('click', () => { state === 'idle' ? startListen() : stopAll(); });
+
+/* ---------- सेटिंग्स ---------- */
+const sheet = $('#sheet');
+function openSheet(){
+  $('#key').value = cfg.key; $('#model').value = cfg.model; $('#rate').value = cfg.rate;
+  $('#optSpeak').checked = cfg.speak; $('#optLoop').checked = cfg.loop;
+  if (window.speechSynthesis) loadVoices();
+  sheet.classList.add('open');
+}
+function closeSheet(){
+  cfg.key = $('#key').value.trim(); cfg.model = $('#model').value.trim() || 'gemini-2.5-flash';
+  store.set('j.key', cfg.key); store.set('j.model', cfg.model);
+  sheet.classList.remove('open'); renderChips();
+}
+$('#gear').addEventListener('click', openSheet);
+$('#close').addEventListener('click', closeSheet);
+sheet.addEventListener('click', (e) => { if (e.target === sheet) closeSheet(); });
+$('#optSpeak').addEventListener('change', (e) => { cfg.speak = e.target.checked; store.set('j.speak', cfg.speak); if (!cfg.speak) stopSpeak(); });
+$('#optLoop').addEventListener('change', (e) => { cfg.loop = e.target.checked; store.set('j.loop', cfg.loop); });
+$('#rate').addEventListener('input', (e) => { cfg.rate = parseFloat(e.target.value); store.set('j.rate', cfg.rate); });
+$('#voice').addEventListener('change', (e) => { cfg.voice = e.target.value; store.set('j.voice', cfg.voice); });
+$('#testVoice').addEventListener('click', () => speak('नमस्कार Sir। मैं JARVIS हूँ। मेरी आवाज़ आप तक पहुँच रही है।', () => setState('idle')));
+$('#clear').addEventListener('click', () => {
+  history = []; store.set('j.hist', history); chat.innerHTML = ''; restoreChat(); toast('चैट मिटा दी गई');
+});
+$('#chk').addEventListener('click', async () => {
+  cfg.key = $('#key').value.trim(); store.set('j.key', cfg.key);
+  if (!cfg.key) return toast('पहले API key डालिए');
+  toast('जाँच रहा हूँ…', 8000);
+  try {
+    const list = await active.listModels();
+    const dl = $('#models'); dl.innerHTML = '';
+    list.forEach((m) => { const o = document.createElement('option'); o.value = m; dl.appendChild(o); });
+    toast('Key सही है ✔ ' + list.length + ' मॉडल मिले। मॉडल बॉक्स में चुनिए।', 4000);
+  } catch(e){
+    toast(e instanceof JErr ? e.message : (navigator.onLine ? 'जाँच नहीं हो पाई' : 'इंटरनेट बंद है'), 4000);
+  }
+});
+
+/* ---------- स्टेटस चिप्स ---------- */
+const net = { bat: null, persisted: null };
+function chip(id, cls, text){ const el = $(id); el.className = 'chip ' + cls; el.lastElementChild.textContent = text; }
+function renderChips(){
+  chip('#stNet', navigator.onLine ? 'ok' : 'bad', navigator.onLine ? 'ऑनलाइन' : 'ऑफ़लाइन');
+  chip('#stAI', active.ready() ? 'ok' : 'warn', active.ready() ? 'Gemini तैयार' : 'Key चाहिए');
+  chip('#stMic', state === 'listening' ? 'bad' : 'ok', state === 'listening' ? 'माइक चालू' : 'माइक बंद');
+  if (net.bat) chip('#stBat', net.bat.level < .2 && !net.bat.charging ? 'warn' : 'ok', 'बैटरी ' + Math.round(net.bat.level * 100) + '%' + (net.bat.charging ? ' ⚡' : ''));
+  else chip('#stBat', '', 'बैटरी ?');
+  chip('#stSto', net.persisted ? 'ok' : 'warn', net.persisted ? 'डेटा सुरक्षित' : 'डेटा सामान्य');
+}
+window.addEventListener('online', renderChips); window.addEventListener('offline', renderChips);
+if (navigator.getBattery) navigator.getBattery().then((b) => { net.bat = b; b.addEventListener('levelchange', renderChips); b.addEventListener('chargingchange', renderChips); renderChips(); }).catch(() => {});
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().then((ok) => { net.persisted = ok; renderChips(); }).catch(() => {});
+
+/* ---------- PWA: इंस्टॉल + सर्विस वर्कर ---------- */
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstall = e; $('#install').hidden = false; });
+$('#install').addEventListener('click', async () => {
+  if (!deferredInstall) return;
+  deferredInstall.prompt(); await deferredInstall.userChoice.catch(() => {}); deferredInstall = null; $('#install').hidden = true;
+});
+window.addEventListener('appinstalled', () => toast('JARVIS फ़ोन में इंस्टॉल हो गया ✔'));
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')){
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+/* =========================================================
+   AI कोर एनिमेशन (3D जैसा घूमता गोला) + वेवफ़ॉर्म
+   नोट: यह एनिमेशन JARVIS की स्थिति (सुन रहा/सोच रहा/बोल रहा) के हिसाब से चलता है,
+   असली आवाज़ के स्तर से नहीं।
+   ========================================================= */
+(function(){
+  const c = $('#core'), x = c.getContext('2d'), w = $('#wave'), wx = w.getContext('2d');
+  let W = 0, H = 0, WW = 0, WH = 0, dpr = 1;
+  function size(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let r = c.getBoundingClientRect(); W = r.width; H = r.height; c.width = W * dpr; c.height = H * dpr; x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    r = w.getBoundingClientRect(); WW = r.width; WH = r.height; w.width = WW * dpr; w.height = WH * dpr; wx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', size); size();
+
+  const N = 120, pts = [], GA = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < N; i++){
+    const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y), th = GA * i;
+    pts.push([Math.cos(th) * r, y, Math.sin(th) * r]);
+  }
+  const COL = { idle:[53,208,255], listening:[90,255,220], thinking:[255,179,71], speaking:[80,170,255] };
+  let col = COL.idle.slice(), amp = 0.05, spin = 0, last = performance.now();
+  const lerp = (a, b, t) => a + (b - a) * t;
+
+  function target(t){
+    const n = Math.abs(Math.sin(t * 7.1) * 0.5 + Math.sin(t * 12.7 + 1) * 0.3 + Math.sin(t * 3.3 + 2) * 0.2);
+    if (state === 'listening') return 0.25 + 0.55 * n;
+    if (state === 'speaking') return 0.3 + 0.6 * n;
+    if (state === 'thinking') return 0.22 + 0.1 * Math.sin(t * 5);
+    return 0.05 + 0.03 * Math.sin(t * 1.6);
+  }
+
+  function frame(now){
+    const dt = Math.min(0.05, (now - last) / 1000); last = now; const t = now / 1000;
+    amp = lerp(amp, target(t), 0.12);
+    const tc = COL[state]; for (let k = 0; k < 3; k++) col[k] = lerp(col[k], tc[k], 0.08);
+    spin += dt * (state === 'thinking' ? 1.8 : 0.45 + amp * 0.9);
+    const C = 'rgb(' + col.map(Math.round).join(',') + ')';
+    const rgba = (a) => 'rgba(' + col.map(Math.round).join(',') + ',' + a + ')';
+
+    x.clearRect(0, 0, W, H);
+    const cx = W / 2, cy = H / 2, R = Math.min(W, H) * 0.34 * (1 + amp * 0.16);
+
+    const g = x.createRadialGradient(cx, cy, 0, cx, cy, R * 1.9);
+    g.addColorStop(0, rgba(0.30 + amp * 0.3)); g.addColorStop(0.5, rgba(0.07)); g.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+
+    const ca = Math.cos(spin), sa = Math.sin(spin), tilt = 0.45, ct = Math.cos(tilt), st = Math.sin(tilt);
+    const P = pts.map((p) => {
+      const X = p[0] * ca + p[2] * sa, Z = -p[0] * sa + p[2] * ca;
+      const Y = p[1] * ct - Z * st, Z2 = p[1] * st + Z * ct;
+      const f = 1 / (1 - Z2 * 0.28);
+      return [cx + X * R * f, cy + Y * R * f, Z2];
+    });
+    x.lineWidth = 1;
+    for (let i = 0; i < N; i++){
+      for (let j = i + 1; j < N; j++){
+        const a = pts[i], b = pts[j];
+        const d = (a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2;
+        if (d < 0.2){
+          const depth = (P[i][2] + P[j][2]) / 2 * 0.5 + 0.5;
+          x.strokeStyle = rgba(0.10 + depth * 0.32);
+          x.beginPath(); x.moveTo(P[i][0], P[i][1]); x.lineTo(P[j][0], P[j][1]); x.stroke();
+        }
+      }
+    }
+    for (let i = 0; i < N; i++){
+      const depth = P[i][2] * 0.5 + 0.5;
+      x.fillStyle = rgba(0.35 + depth * 0.65);
+      x.beginPath(); x.arc(P[i][0], P[i][1], 1 + depth * 1.6, 0, 6.2832); x.fill();
+    }
+    for (let k = 0; k < 3; k++){
+      x.strokeStyle = rgba(0.38 - k * 0.08); x.lineWidth = 1.2;
+      x.beginPath(); x.ellipse(cx, cy, R * (1.28 + k * 0.17), R * (0.34 + k * 0.05), spin * (k % 2 ? -1 : 1) * 0.7 + k, 0, 6.2832); x.stroke();
+    }
+    const cg = x.createRadialGradient(cx, cy, 0, cx, cy, R * 0.34 * (1 + amp * 0.5));
+    cg.addColorStop(0, 'rgba(255,255,255,0.95)'); cg.addColorStop(0.35, rgba(0.85)); cg.addColorStop(1, rgba(0));
+    x.fillStyle = cg; x.beginPath(); x.arc(cx, cy, R * 0.4 * (1 + amp * 0.5), 0, 6.2832); x.fill();
+    $('#stateLabel i').style.background = C; $('#stateLabel i').style.boxShadow = '0 0 8px ' + C; $('#stateLabel').style.color = C;
+
+    // वेवफ़ॉर्म
+    wx.clearRect(0, 0, WW, WH);
+    const bars = Math.max(20, Math.floor(WW / 7)), bw = WW / bars;
+    for (let i = 0; i < bars; i++){
+      const m = Math.abs(Math.sin(i * 0.55 + t * 5) * 0.55 + Math.sin(i * 0.23 - t * 3.1) * 0.45);
+      const edge = Math.sin((i / (bars - 1)) * Math.PI);
+      const h = Math.max(2, (WH - 4) * (0.06 + amp * 1.05 * m) * (0.35 + 0.65 * edge));
+      wx.fillStyle = rgba(0.35 + 0.5 * edge);
+      wx.fillRect(i * bw + 1, (WH - h) / 2, Math.max(2, bw - 2), h);
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+/* ---------- शुरुआत ---------- */
+restoreChat();
+renderChips();
+</script>
+</body>
+</html>
